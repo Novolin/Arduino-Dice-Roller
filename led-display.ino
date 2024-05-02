@@ -16,8 +16,9 @@ LiquidCrystal lcd(8,9,10,11,12,13);
 
 uint8_t last_dice = 0;
 uint8_t selected_dice = 5;
-char lineOne[] = " Press To Roll: ";
-char lineTwo[] = " 20 12 10 6 4 2 ";
+char lineOne[] = " Press To Roll  ";
+char lineTwo[] = "Roll D   Last:  ";
+char digit_names[][4]= {"D20","100", "D12", "D10", "D6 ", "D4 ", "D2 "};
 const uint8_t dice_vals[] = {21,13,11,7,5,3};
 const uint8_t cursor_locs[] = {0,3,6,9,11,13,15};
 bool debounce_roll = true;
@@ -25,7 +26,6 @@ bool debounce_curs = true;
 // 7 Segment exclusive variables
 const uint8_t led_nums[] = {0xFC, 0x60, 0xDA, 0xF2, 0x66, 0xB6, 0xBE, 0xE0, 0xFE, 0xE6};
 const uint8_t disp_patterns[] = {4,8,16,32,64,128,256};
-const uint8_t enablePins[] = {E0,D0};
 bool current_digit = 0;
 long rippleTime;
 
@@ -77,6 +77,11 @@ int rollDice(int dval){
   	int roll = random(1,dval);
     rollAnimation(2);
   	writeDigits(roll); 
+    last_dice = roll;
+    lcd.setCursor(13,1);
+    lcd.print("   ");
+    lcd.setCursor(13,1);
+    lcd.print(":"+ String(last_dice));
   	return roll;
     
 }
@@ -91,21 +96,21 @@ void rollAnimation(int duration){
     }
     writeLED(disp_patterns[anim_step], disp_patterns[anim_step]);
     rippleDisp();
-    delay(250);
+    delay(200);
   }
 }
 
-void moveCursor(){
+void selectDice(){
   lcd.setCursor(0,1);
   lcd.print(lineTwo);
   selected_dice++;
   if (selected_dice > 5){
     selected_dice = 0;
   }
-  lcd.setCursor(cursor_locs[selected_dice],1);
-  lcd.print("<");
-  lcd.setCursor(cursor_locs[selected_dice + 1],1);
-  lcd.print(">");
+  lcd.setCursor(5,1);
+  lcd.print(digit_names[selected_dice]);
+  lcd.setCursor(13,1);
+  lcd.print(":"+ String(last_dice));
 }
 
 void rippleDisp(){
@@ -141,7 +146,7 @@ void setup()
   	lcd.print(lineOne);
   	lcd.setCursor(0,1);
   	lcd.print(lineTwo);
-    moveCursor();
+    selectDice();
 
 
 }
@@ -158,7 +163,7 @@ void loop()
     }
     if (!digitalRead(CURS_BTN)){
         if (debounce_curs){
-            moveCursor();
+            selectDice();
             debounce_curs = false;
         }
     } else {
