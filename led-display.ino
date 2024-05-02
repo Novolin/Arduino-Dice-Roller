@@ -2,10 +2,12 @@
 
 #include <LiquidCrystal.h>
 #define SRCK 0
-#define E0 1
-#define D0 2
-#define E1 3
-#define D1 4
+#define D0 1
+#define E0 2
+#define D1 3
+#define E1 4
+#define D2 5
+#define E2 6
 
 
 #define ROLL_BTN A4
@@ -15,18 +17,21 @@
 LiquidCrystal lcd(8,9,10,11,12,13);
 
 uint8_t last_dice = 0;
-uint8_t selected_dice = 5;
+uint8_t roll;
+uint8_t selected_dice = 6;
 char lineOne[] = " Press To Roll  ";
 char lineTwo[] = "Roll D   Last:  ";
 char digit_names[][4]= {"D20","100", "D12", "D10", "D6 ", "D4 ", "D2 "};
-const uint8_t dice_vals[] = {21,13,11,7,5,3};
+const uint8_t dice_vals[] = {21,101,13,11,7,5,3};
 const uint8_t cursor_locs[] = {0,3,6,9,11,13,15};
 bool debounce_roll = true;
 bool debounce_curs = true;
 // 7 Segment exclusive variables
 const uint8_t led_nums[] = {0xFC, 0x60, 0xDA, 0xF2, 0x66, 0xB6, 0xBE, 0xE0, 0xFE, 0xE6};
 const uint8_t disp_patterns[] = {4,8,16,32,64,128,256};
-bool current_digit = 0;
+const uint8_t enable_pins[] = {E0,E1,E2};
+uint8_t current_digit = 0;
+
 long rippleTime;
 
 void writeLED(int data_0, int data_1 = -1, int data_2 = -1, int data_3 = -1){
@@ -38,15 +43,10 @@ void writeLED(int data_0, int data_1 = -1, int data_2 = -1, int data_3 = -1){
             digitalWrite(D1, data_1 & 1);
             data_1 = data_1 >> 1;
         } 
-        /* once i find pins lmao
-        if (data_2 < 10){
-            digitalWrite(D3, data_2 & 1);
+        if (data_2 >= 0){
+            digitalWrite(D2, data_2 & 1);
             data_2 = data_2 >> 1;
         }
-        if (data_3 < 10){
-            digitalWrite(D4, data_3 & 1);
-            data_3 = data_3 >> 1;
-        }*/
         digitalWrite(SRCK, HIGH);
         delay(2); // let it travel down the lines
         digitalWrite(SRCK, LOW);
@@ -63,25 +63,26 @@ void writeDigits(int num){
     uint8_t tens = num / 10;
     if (tens >= 10 ){
         tens = tens % 10; //ten TEN TEN TEN TEN!!!! TEN TEN !!!!!!!!!!
-    }
-    uint8_t hundreds = num / 100;
+    } 
+    int hundreds = num / 100;
 
     // Output to each decimal place:
-    writeLED(led_nums[ones], led_nums[tens]);
+    writeLED(led_nums[ones], led_nums[tens], led_nums[hundreds]);
 }
 
 
 int rollDice(int dval){
 	// The roll is one line, 
   	//everything else is about making things pretty
-  	int roll = random(1,dval);
-    rollAnimation(2);
-  	writeDigits(roll); 
-    last_dice = roll;
-    lcd.setCursor(13,1);
+  	last_dice = roll;
+  	lcd.setCursor(13,1);
     lcd.print("   ");
     lcd.setCursor(13,1);
     lcd.print(":"+ String(last_dice));
+  	roll = random(1,dval);
+    rollAnimation(2);
+  	writeDigits(roll); 
+    
   	return roll;
     
 }
@@ -94,9 +95,9 @@ void rollAnimation(int duration){
     if (anim_step > 7){
       anim_step = 0;
     }
-    writeLED(disp_patterns[anim_step], disp_patterns[anim_step]);
+    writeLED(disp_patterns[anim_step], disp_patterns[anim_step], disp_patterns[anim_step]);
     rippleDisp();
-    delay(200);
+    delay(100);
   }
 }
 
@@ -115,16 +116,13 @@ void selectDice(){
 
 void rippleDisp(){
 	digitalWrite(E0,HIGH);
-  digitalWrite(E1,HIGH);
-    current_digit = !current_digit;
-      if (current_digit){
-      digitalWrite(E1,LOW);
+    digitalWrite(E1,HIGH);
+    digitalWrite(E2, HIGH);
+    current_digit ++;
+    if (current_digit > 2){
+        current_digit = 0;
     }
-  else {
-
-    digitalWrite(E0,LOW);
-      
-    }
+	digitalWrite(enable_pins[current_digit], LOW);
 }
 
 void setup()
@@ -137,8 +135,11 @@ void setup()
   	pinMode(D0,OUTPUT);
     pinMode(E1,OUTPUT);
     pinMode(D1,OUTPUT);
+  	pinMode(E2,OUTPUT);
+    pinMode(D2,OUTPUT);
 	digitalWrite(E0, HIGH);
     digitalWrite(E1, HIGH);
+    digitalWrite(E2, HIGH);
   	pinMode(ROLL_BTN, INPUT_PULLUP);
   	pinMode(CURS_BTN, INPUT_PULLUP);
   	rippleTime = millis() + 200;
